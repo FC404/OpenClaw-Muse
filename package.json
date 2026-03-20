@@ -1,9 +1,22 @@
 {
   "name": "clawmuse",
   "version": "0.1.0",
+  "description": "OpenClaw desktop companion with Live2D, Electron, and GPT-SoVITS integration.",
   "private": true,
+  "license": "UNLICENSED",
   "type": "module",
   "main": "electron/main.cjs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/FC404/OpenClaw-Muse.git"
+  },
+  "keywords": [
+    "openclaw",
+    "live2d",
+    "electron",
+    "gpt-sovits",
+    "virtual-companion"
+  ],
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",

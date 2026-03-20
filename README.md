@@ -1,150 +1,65 @@
-# clawmuse
+# OpenClaw-Muse
 
-一个把 OpenClaw 做成虚拟陪伴工作台的开发者皮套原型。
+OpenClaw-Muse 是一个把 OpenClaw、Live2D、Electron 和 GPT-SoVITS 结合在一起的虚拟角色工作台项目。
 
-## 项目简介
+它不只是一个聊天网页，也不只是一个普通代码助手。这个项目想做的是，把 AI 的工作能力包装成一个更有角色感、陪伴感和桌面存在感的交互界面。
 
-`clawmuse` 不是普通聊天网页，也不是冷冰冰的代码助手。
-
-它想做的是一件更有意思的事：
-
-- 用 `OpenClaw` 做大脑
-- 用 `Live2D` 做角色皮套
-- 用语音和双模式交互提升陪伴感
-- 让开发者在工作时，既能获得 AI 的能力，也能获得更自然、更有人味的交互体验
+## 项目定位
 
 你可以把它理解成：
 
-> 一个面向开发者的 OpenClaw Companion。
+> 一个面向日常陪伴与工作场景的 OpenClaw 虚拟角色前端原型。
 
-它既能聊天，也能进入工作模式帮助处理报错、需求、日志和代码问题。
+当前版本重点在于：
 
-## 一句话介绍
+- 用 `OpenClaw Gateway` 负责对话能力
+- 用 `Live2D + PixiJS` 负责角色表现
+- 用 `GPT-SoVITS` 负责语音输出
+- 用 `Electron` 提供桌面窗口和日志面板
+- 用本地记忆、侧写、历史记录增强持续使用体验
 
-这是一个把 OpenClaw 包装成二次元虚拟搭子的开发者工作台原型。
+## 当前功能
 
-## 核心特点
+- 聊天模式 / 工作模式切换
+- Live2D 角色展示与交互
+- 背景切换、镜头切换、鼠标跟随等界面控制
+- 本地用户侧写与聊天历史恢复
+- GPT-SoVITS 语音输出接入
+- Electron 桌面模式
+- 运行日志侧窗
 
-- `OpenClaw 驱动`
-  - 聊天、任务协作、工作能力都由 OpenClaw 提供
-- `Live2D 角色界面`
-  - 用角色皮套承载 AI 交互，不只是文本框
-- `聊天 / 工作双模式`
-  - 聊天模式更自然、更像陪伴
-  - 工作模式更安静、更强调摘要和效率
-- `开发者场景导向`
-  - 适合接报错、需求、日志、代码问题
-- `语音交互能力`
-  - 目标是把“陪你开发”这件事做得更轻松，不那么死气沉沉
+## 技术栈
 
-## 为什么做它
+- 前端：`HTML`、`CSS`、`JavaScript`
+- 渲染：`PixiJS`、`Live2D Cubism`
+- 后端：`Node.js`、`Express`、`WebSocket`
+- 桌面壳：`Electron`
+- 语音：`GPT-SoVITS`
 
-传统 AI 助手虽然强，但很多时候体验很像：
-
-- 工具
-- 面板
-- 命令入口
-- 冷冰冰的回复器
-
-这个项目想验证另一条路：
-
-> 如果把 AI 工作能力做成一个有角色感、有陪伴感、愿意长期开着的搭子，会不会更适合开发者日常使用？
-
-## 当前能力
-
-当前版本已经完成了这些基础能力：
-
-- OpenClaw 网关接入
-- Live2D 角色展示
-- 聊天 / 工作双模式切换
-- 本地记忆与简单关系状态
-- 浏览器语音输入
-- 语音输出链路接入中的原型验证
-
-## 模式说明
-
-### 聊天模式
-
-适合：
-
-- 轻交流
-- 陪伴感对话
-- 更自然的人类语言
-
-特点：
-
-- 回复更口语化
-- 更有人味
-- 可配合语音输出
-
-### 工作模式
-
-适合：
-
-- 报错分析
-- 需求拆解
-- 日志阅读
-- 代码问题处理
-
-特点：
-
-- 输出更安静
-- 长内容优先给摘要
-- 避免整屏大段文本轰炸
-
-## 技术结构
-
-### 前端
-
-- 原生 `HTML / CSS / JavaScript`
-- `PixiJS`
-- `Live2D Cubism`
-
-### 后端
-
-- `Node.js`
-- `Express`
-- `WebSocket`
-
-### 能力层
-
-- `OpenClaw Gateway`
-- 角色记忆与关系状态
-- TTS / 语音链路原型接入
-
-## 项目结构
+## 目录结构
 
 ```text
 clawmuse/
 ├─ public/
 │  ├─ index.html
 │  ├─ style.css
-│  └─ app.js
-├─ data/
+│  ├─ app.js
+│  ├─ assets/
+│  └─ vendor/
+├─ electron/
+│  ├─ main.cjs
+│  ├─ preload.cjs
+│  └─ logs.html
 ├─ voices/
+├─ data/
 ├─ server.js
 ├─ gatewayClient.js
 ├─ memoryStore.js
+├─ start-clawmuse.bat
+├─ start-clawmuse-electron.bat
 ├─ .env.example
 └─ package.json
 ```
-
-## 当前阶段
-
-这个项目目前更适合定义为：
-
-- 原型
-- MVP
-- 开发者陪伴皮套验证版
-
-它已经验证了主方向，但还没有进入完整产品化阶段。
-
-当前重点不是“大而全”，而是把这几件事做扎实：
-
-- 角色感
-- 工作流
-- 实时交互
-- 语音体验
 
 ## 本地运行
 
@@ -156,11 +71,18 @@ npm install
 
 ### 2. 配置环境变量
 
-参考：
+复制 `.env.example` 为 `.env`，然后根据你本地环境填写配置。
 
-- [.env.example](D:/openxData/clawmuse/.env.example)
+常用项包括：
 
-### 3. 启动项目
+- `OPENCLAW_GATEWAY_URL`
+- `OPENCLAW_GATEWAY_TOKEN`
+- `OPENCLAW_SESSION_KEY`
+- `GPT_SOVITS_API_URL`
+- `GPT_SOVITS_REF_AUDIO_ZH`
+- `GPT_SOVITS_REF_AUDIO_EN`
+
+### 3. 浏览器模式启动
 
 ```bash
 npm start
@@ -170,8 +92,62 @@ npm start
 
 - `http://127.0.0.1:8787`
 
-## 对外介绍时可以怎么说
+### 4. Electron 桌面模式启动
 
-你可以直接这样介绍它：
+```bash
+npm run desktop
+```
 
-> 这是一个把 OpenClaw 做成虚拟陪伴工作台的项目。它不是单纯的聊天女友，也不是普通代码助手，而是尝试把 AI 的工作能力做成一个开发者愿意长期开着的虚拟搭子。
+或者直接使用：
+
+- `start-clawmuse-electron.bat`
+
+## 可用脚本
+
+- `npm start`：启动本地服务
+- `npm run dev`：监听模式启动服务
+- `npm run desktop`：启动 Electron 桌面版
+
+## 仓库说明
+
+这个仓库没有提交以下本地运行资源：
+
+- `node_modules/`
+- `checkpoints/`
+- `GPT_SoVITS/`
+- 本地 `.env`
+- 运行时缓存与临时文件
+
+也就是说，仓库里保留的是项目源码、界面资源、Electron 壳和当前使用的语音参考素材，但不包含你本地的大模型运行目录。
+
+## 当前阶段
+
+这个项目目前更适合定义为：
+
+- 一个可运行的原型
+- 一个 OpenClaw 桌面角色化实验
+- 一个持续迭代中的个人项目
+
+它现在最重要的目标不是“大而全”，而是把下面这几件事做顺：
+
+- 角色表现
+- 日常聊天体验
+- 工作模式体验
+- 语音与桌面化协同
+
+## 后续方向
+
+- 更完整的公开文档
+- 更稳定的窗口化与桌面体验
+- 更清晰的模型 / 语音切换能力
+- 更自然的角色动作与待机逻辑
+- 更方便的打包与分发流程
+
+## 推荐阅读入口
+
+如果你是第一次看这个仓库，建议从这些文件开始：
+
+- `public/app.js`
+- `public/style.css`
+- `server.js`
+- `electron/main.cjs`
