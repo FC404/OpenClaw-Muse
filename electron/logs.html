@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClawMuse Logs</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #090909;
+      --panel: #131313;
+      --line: rgba(255, 255, 255, 0.08);
+      --text: #f2f2f2;
+      --muted: #9a9a9a;
+      --green: #29d764;
+      --red: #ff5a5f;
+      --amber: #ffbf47;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; }
+
+    body {
+      font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(180deg, #080808, #131313);
+      color: var(--text);
+    }
+
+    .shell {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      height: 100vh;
+      padding: 14px;
+      gap: 12px;
+    }
+
+    .topbar,
+    .config-grid,
+    .log-panel {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(18, 18, 18, 0.92);
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      gap: 12px;
+    }
+
+    .title {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .title p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .refresh-btn {
+      min-width: 76px;
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #1d1d1d;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .toolbar {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .lang-select {
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #1d1d1d;
+      color: var(--text);
+      padding: 0 10px;
+    }
+
+    .config-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      padding: 12px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #0f0f0f;
+      padding: 12px;
+      min-width: 0;
+    }
+
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: 13px;
+      color: #d9d9d9;
+    }
+
+    .kv {
+      display: grid;
+      grid-template-columns: 92px 1fr;
+      gap: 8px;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .kv span:first-child {
+      color: var(--muted);
+    }
+
+    .runtime-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .runtime-pill.ok {
+      background: rgba(41, 215, 100, 0.12);
+      color: var(--green);
+      border: 1px solid rgba(41, 215, 100, 0.28);
+    }
+
+    .runtime-pill.bad {
+      background: rgba(255, 90, 95, 0.12);
+      color: var(--red);
+      border: 1px solid rgba(255, 90, 95, 0.28);
+    }
+
+    .log-panel {
+      min-height: 0;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .log-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .log-header h2 {
+      margin: 0;
+      font-size: 14px;
+    }
+
+    .log-stream {
+      min-height: 0;
+      overflow: auto;
+      padding: 10px 12px 16px;
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .log-line {
+      display: grid;
+      grid-template-columns: 62px 58px 1fr;
+      gap: 10px;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .log-ts {
+      color: var(--muted);
+    }
+
+    .log-source {
+      color: #d0d0d0;
+      text-transform: uppercase;
+    }
+
+    .log-text.info { color: #e8e8e8; }
+    .log-text.error { color: #ff9da1; }
+    .log-text.warn { color: var(--amber); }
+
+    @media (max-width: 820px) {
+      .config-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .log-line {
+        grid-template-columns: 1fr;
+        gap: 2px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="topbar">
+      <div class="title">
+        <h1 id="pageTitle">ClawMuse Logs</h1>
+        <p id="pageSubtitle">Live output for GPT-SoVITS, OpenClaw, and local services.</p>
+      </div>
+      <div class="toolbar">
+        <select id="langSelect" class="lang-select" aria-label="Language">
+          <option value="en">English</option>
+          <option value="zh">中文</option>
+        </select>
+        <button id="refreshBtn" class="refresh-btn" type="button">Refresh</button>
+      </div>
+    </section>
+
+    <section class="config-grid">
+      <article class="card">
+        <h2 id="runtimeTitle">Runtime</h2>
+        <div id="runtimeContent"></div>
+      </article>
+      <article class="card">
+        <h2 id="configTitle">Config</h2>
+        <div id="configContent" class="kv"></div>
+      </article>
+    </section>
+
+    <section class="log-panel">
+      <div class="log-header">
+        <h2 id="outputTitle">Service Output</h2>
+        <span id="logMeta" class="log-meta"></span>
+      </div>
+      <div id="logStream" class="log-stream"></div>
+    </section>
+  </main>
+
+  <script>
+    const runtimeContent = document.getElementById('runtimeContent');
+    const configContent = document.getElementById('configContent');
+    const logStream = document.getElementById('logStream');
+    const logMeta = document.getElementById('logMeta');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const langSelect = document.getElementById('langSelect');
+    const pageTitle = document.getElementById('pageTitle');
+    const pageSubtitle = document.getElementById('pageSubtitle');
+    const runtimeTitle = document.getElementById('runtimeTitle');
+    const configTitle = document.getElementById('configTitle');
+    const outputTitle = document.getElementById('outputTitle');
+    const LANG_STORAGE_KEY = 'clawmuse-log-lang';
+    let currentLang = localStorage.getItem(LANG_STORAGE_KEY) || 'en';
+
+    const I18N = {
+      en: {
+        pageTitle: 'ClawMuse Logs',
+        pageSubtitle: 'Live output for GPT-SoVITS, OpenClaw, and local services.',
+        runtimeTitle: 'Runtime',
+        configTitle: 'Config',
+        outputTitle: 'Service Output',
+        refresh: 'Refresh',
+        serverReady: 'Server Ready',
+        serverDown: 'Server Down',
+        voiceReady: 'Voice Ready',
+        voiceDown: 'Voice Down',
+        clawOnline: 'OpenClaw Online',
+        clawOffline: 'OpenClaw Offline',
+        backend: 'Backend',
+        lastCheck: 'Last Check',
+        appUrl: 'App URL',
+        port: 'Port',
+        voicePort: 'Voice Port',
+        gateway: 'Gateway',
+        session: 'Session',
+        token: 'Token',
+        voiceDir: 'Voice Dir',
+        voiceConfig: 'Voice Config',
+        lines: 'lines'
+      },
+      zh: {
+        pageTitle: 'ClawMuse 日志',
+        pageSubtitle: '实时查看 GPT-SoVITS、OpenClaw 和本地服务输出。',
+        runtimeTitle: '运行状态',
+        configTitle: '配置',
+        outputTitle: '服务输出',
+        refresh: '刷新',
+        serverReady: '服务已就绪',
+        serverDown: '服务未就绪',
+        voiceReady: '语音已就绪',
+        voiceDown: '语音未就绪',
+        clawOnline: 'OpenClaw 已连接',
+        clawOffline: 'OpenClaw 未连接',
+        backend: '后端',
+        lastCheck: '最近检查',
+        appUrl: '应用地址',
+        port: '端口',
+        voicePort: '语音端口',
+        gateway: '网关',
+        session: '会话',
+        token: '令牌',
+        voiceDir: '语音目录',
+        voiceConfig: '语音配置',
+        lines: '行'
+      }
+    };
+
+    function t(key) {
+      return I18N[currentLang]?.[key] || I18N.en[key] || key;
+    }
+
+    function renderChromeCopy() {
+      pageTitle.textContent = t('pageTitle');
+      pageSubtitle.textContent = t('pageSubtitle');
+      runtimeTitle.textContent = t('runtimeTitle');
+      configTitle.textContent = t('configTitle');
+      outputTitle.textContent = t('outputTitle');
+      refreshBtn.textContent = t('refresh');
+    }
+
+    function pill(label, ok) {
+      return `<div class="runtime-pill ${ok ? 'ok' : 'bad'}">${label}</div>`;
+    }
+
+    function renderRuntime(runtime) {
+      if (!runtime) return;
+      runtimeContent.innerHTML = [
+        pill(runtime.serverReady ? t('serverReady') : t('serverDown'), runtime.serverReady),
+        pill(runtime.voiceReady ? t('voiceReady') : t('voiceDown'), runtime.voiceReady),
+        pill(runtime.openClawConnected ? t('clawOnline') : t('clawOffline'), runtime.openClawConnected),
+        `<div class="kv">
+          <span>${t('backend')}</span><span>${runtime.openClawBackend || 'openclaw'}</span>
+          <span>${t('lastCheck')}</span><span>${runtime.lastCheckedAt || '-'}</span>
+        </div>`
+      ].join('');
+    }
+
+    function renderConfig(config) {
+      if (!config) return;
+      const entries = [
+        [t('appUrl'), config.appUrl],
+        [t('port'), config.port],
+        [t('voicePort'), config.voicePort],
+        [t('gateway'), config.gatewayUrl],
+        [t('session'), config.sessionKey],
+        [t('token'), config.gatewayToken],
+        [t('voiceDir'), config.voiceDir],
+        [t('voiceConfig'), config.voiceConfig]
+      ];
+      configContent.innerHTML = entries.map(([label, value]) => (
+        `<span>${label}</span><span>${String(value || '-')}</span>`
+      )).join('');
+    }
+
+    function renderLogs(logs) {
+      const items = Array.isArray(logs) ? logs : [];
+      logMeta.textContent = `${items.length} ${t('lines')}`;
+      logStream.innerHTML = items.map((entry) => {
+        const ts = String(entry.ts || '').split('T')[1]?.replace('Z', '')?.slice(0, 8) || '--:--:--';
+        return `
+          <div class="log-line">
+            <div class="log-ts">${ts}</div>
+            <div class="log-source">${entry.source || 'system'}</div>
+            <div class="log-text ${entry.level || 'info'}">${String(entry.text || '')}</div>
+          </div>
+        `;
+      }).join('');
+      logStream.scrollTop = logStream.scrollHeight;
+    }
+
+    function renderSnapshot(snapshot) {
+      if (!snapshot) return;
+      renderChromeCopy();
+      renderRuntime(snapshot.runtime);
+      renderConfig(snapshot.config);
+      renderLogs(snapshot.logs);
+    }
+
+    async function boot() {
+      const snapshot = await window.clawMuseLogs.getSnapshot();
+      renderSnapshot(snapshot);
+      window.clawMuseLogs.onUpdate((next) => renderSnapshot(next));
+    }
+
+    refreshBtn.addEventListener('click', async () => {
+      refreshBtn.disabled = true;
+      try {
+        const snapshot = await window.clawMuseLogs.refresh();
+        renderSnapshot(snapshot);
+      } finally {
+        refreshBtn.disabled = false;
+      }
+    });
+
+    langSelect.value = currentLang;
+    renderChromeCopy();
+    langSelect.addEventListener('change', () => {
+      currentLang = langSelect.value;
+      localStorage.setItem(LANG_STORAGE_KEY, currentLang);
+      window.clawMuseLogs.getSnapshot().then((snapshot) => renderSnapshot(snapshot));
+    });
+
+    boot().catch((error) => {
+      logStream.textContent = error.message || String(error);
+    });
+  </script>
+</body>
+</html>

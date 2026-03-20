@@ -1,0 +1,16 @@
+node_modules/
+checkpoints/
+GPT_SoVITS/
+
+.env
+
+data/*
+!data/.gitkeep
+
+tmp_tts.bin
+tmp_tts_headers.txt
+tmp_tts_req.json
+
+*.log
+.DS_Store
+Thumbs.db

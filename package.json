@@ -1,0 +1,22 @@
+{
+  "name": "clawmuse",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "desktop": "electron ."
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "iconv-lite": "^0.7.2",
+    "ws": "^8.19.0"
+  },
+  "devDependencies": {
+    "electron": "^41.0.3"
+  }
+}
