@@ -10,161 +10,162 @@
   <div class="scene-glow glow-a"></div>
   <div class="scene-glow glow-b"></div>
 
-  <main class="app">
-    <section class="left-panel" id="avatarWrap" data-emotion="neutral">
-      <div class="avatar-stage" id="avatarStage">
-        <canvas id="live2dCanvas" class="live2d-canvas"></canvas>
-        <div id="live2dFallback" class="live2d-fallback">Live2D 加载中...</div>
-      </div>
-      <div class="avatar-topbar">
-        <div id="desktopQuickbar" class="desktop-quickbar hidden" aria-label="桌面控制">
-          <button id="desktopLogsBtn" class="desktop-tool-btn" type="button" title="查看日志">日志</button>
-          <button id="desktopPinBtn" class="desktop-tool-btn" type="button" title="固定最前层" aria-pressed="false">置顶</button>
-          <button id="desktopRefreshBtn" class="desktop-tool-btn" type="button" title="刷新当前窗口">刷新</button>
-        </div>
-        <div id="gatewayStatus" class="status status-disconnected" aria-live="polite" title="OpenClaw offline">
-          <span class="status-dot" aria-hidden="true"></span>
-          <span id="gatewayStatusText">offline</span>
+  <main class="app app-workbench">
+    <aside class="shell-sidebar">
+      <div class="sidebar-brand">
+        <div class="sidebar-logo">CM</div>
+        <div class="sidebar-brand-copy">
+          <span class="sidebar-kicker">OpenClaw-Muse</span>
+          <strong>ClawMuse</strong>
+          <p>桌面图形化工作台</p>
         </div>
       </div>
-      <div class="dock-flyout" id="dockFlyout" data-expanded="false">
-        <button id="dockToggleBtn" class="dock-toggle-btn" type="button" aria-label="展开工具栏" title="展开工具栏" aria-expanded="false">
-          <svg class="dock-toggle-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M5 7h14"></path>
-            <path d="M5 12h14"></path>
-            <path d="M5 17h14"></path>
-          </svg>
-        </button>
-        <div class="left-dock">
-          <div class="mode-switch dock-mode-switch" role="tablist" aria-label="交互模式">
-            <button id="chatModeBtn" type="button" class="mode-chip is-active" aria-pressed="true">聊天</button>
-            <button id="workModeBtn" type="button" class="mode-chip" aria-pressed="false">工作</button>
-          </div>
-          <button id="voiceToggleBtn" type="button" class="voice-toggle dock-voice-toggle" aria-label="语音朗读">
-            <svg class="voice-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M5 10h4l5-4v12l-5-4H5z"></path>
-              <path class="voice-wave wave-1" d="M16 9.5c1 .7 1.5 1.6 1.5 2.5s-.5 1.8-1.5 2.5"></path>
-              <path class="voice-wave wave-2" d="M18.5 7c1.7 1.2 2.5 3 2.5 5s-.8 3.8-2.5 5"></path>
-            </svg>
-            <span class="voice-slash" aria-hidden="true"></span>
-          </button>
-          <button id="profileBtn" class="dock-btn profile-btn" type="button" aria-label="打开用户侧写" title="打开用户侧写">
-            <img class="dock-icon-image" src="./assets/icon/drawing.png" alt="" aria-hidden="true" />
-          </button>
-          <button id="cameraBtn" class="dock-btn camera-toggle" type="button" aria-label="切换到全身镜头" title="切换到全身镜头">
-            <img class="dock-icon-image" src="./assets/icon/Reverse.png" alt="" aria-hidden="true" />
-          </button>
-          <button id="followBtn" class="dock-btn follow-toggle" type="button" aria-label="开启鼠标跟随" title="开启鼠标跟随">
-            <img id="followBtnIcon" class="dock-icon-image follow-icon-image" src="./assets/icon/Closeeyes.png" alt="" aria-hidden="true" />
-          </button>
-          <button id="chatViewBtn" class="dock-pill chat-view-btn" type="button" aria-label="切换到剧情框对话" title="切换到剧情框对话">
-            <span id="chatViewBtnText">剧情框</span>
-          </button>
-          <div class="dock-bg-switch">
-            <button id="bgPrevBtn" class="dock-icon-btn" type="button" aria-label="上一张背景" title="上一张背景">‹</button>
-            <span id="bgLabel" class="bg-label">教室</span>
-            <button id="bgNextBtn" class="dock-icon-btn" type="button" aria-label="下一张背景" title="下一张背景">›</button>
-          </div>
-        </div>
-      </div>
-      <div id="galDialog" class="gal-dialog" aria-live="polite">
-        <div class="gal-dialog-shell">
-          <div class="gal-dialog-header">
-            <span id="galSpeaker" class="gal-speaker">铃汐</span>
-            <span id="galPrompt" class="gal-prompt">隐藏手机面板时，也可以在这里继续聊天。</span>
-          </div>
-          <div id="galMessage" class="gal-message">嗨，我是铃汐。你把手机面板收起来时，我也会在这里接住你。</div>
-          <form id="galForm" class="gal-composer">
-            <input
-              id="galInput"
-              type="text"
-              placeholder="在这里继续说..."
-              autocomplete="off"
-              autocapitalize="off"
-              autocorrect="off"
-              spellcheck="false"
-            />
-            <button id="galMicBtn" type="button" class="gal-mic-btn">语音</button>
-            <button id="galSendBtn" type="submit" class="gal-send-btn">发送</button>
-          </form>
-        </div>
-      </div>
-      <div id="profileModal" class="profile-modal hidden" aria-hidden="true">
-        <div id="profileBackdrop" class="profile-backdrop"></div>
-        <aside id="profileCard" class="profile-card" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
-          <div class="profile-card-header">
-            <div>
-              <h3 id="profileTitle">用户侧写</h3>
-              <p>提前告诉铃汐你是谁，她会更自然地接住上下文。</p>
-            </div>
-            <button id="closeProfileBtn" type="button" class="profile-close" aria-label="关闭侧写">×</button>
-          </div>
-          <form id="profileForm" class="profile-form">
-            <label>
-              <span>你的名字</span>
-              <input id="profileName" type="text" maxlength="20" placeholder="例如：阿泽" />
-            </label>
-            <label>
-              <span>希望她怎么称呼你</span>
-              <input id="profilePreferredTitle" type="text" maxlength="20" placeholder="例如：阿泽 / 哥哥 / 老板" />
-            </label>
-            <div class="profile-grid">
-              <label>
-                <span>年龄</span>
-                <input id="profileAge" type="text" maxlength="10" placeholder="例如：24" />
-              </label>
-              <label>
-                <span>职业</span>
-                <input id="profileJob" type="text" maxlength="24" placeholder="例如：前端工程师" />
-              </label>
-            </div>
-            <label>
-              <span>补充侧写</span>
-              <textarea id="profileTraits" rows="4" maxlength="180" placeholder="例如：夜猫子，最近在做独立产品，喜欢极简风。"></textarea>
-            </label>
-            <p id="profileStatus" class="profile-status" aria-live="polite"></p>
-            <div class="profile-actions">
-              <button id="saveProfileBtn" type="submit" class="profile-save">保存侧写</button>
-            </div>
-          </form>
-        </aside>
-      </div>
-    </section>
 
-    <section class="chat-panel">
-      <div class="phone-shell">
-        <div class="phone-frame"></div>
-        <div class="phone-screen">
-          <div class="phone-statusbar" aria-hidden="true">
-            <span class="phone-time">21:41</span>
-            <div class="phone-island"></div>
-            <div class="phone-icons">
-              <span class="phone-signal"></span>
-              <span class="phone-wifi"></span>
-              <span class="phone-battery"></span>
+      <div class="sidebar-actions">
+        <button id="newThreadBtn" class="sidebar-action is-primary" type="button">新对话</button>
+        <button class="sidebar-action" type="button" disabled>自动化程序</button>
+        <button class="sidebar-action" type="button" disabled>技能</button>
+      </div>
+
+      <div class="thread-panel">
+        <div class="thread-panel-header">
+          <span>对话串</span>
+          <span id="threadCount" class="thread-count">0</span>
+        </div>
+        <div id="threadList" class="thread-list"></div>
+      </div>
+
+      <button class="sidebar-settings" type="button" disabled>设置</button>
+    </aside>
+
+    <section class="workspace-main">
+      <header class="workspace-header">
+        <div class="workspace-header-actions">
+          <div id="desktopQuickbar" class="desktopQuickbar desktop-quickbar hidden" aria-label="桌面控制">
+            <button id="desktopLogsBtn" class="desktop-tool-btn" type="button" title="查看日志">日志</button>
+            <button id="desktopPinBtn" class="desktop-tool-btn" type="button" title="固定最前层" aria-pressed="false">置顶</button>
+            <button id="desktopRefreshBtn" class="desktop-tool-btn" type="button" title="刷新当前窗口">刷新</button>
+          </div>
+          <div id="gatewayStatus" class="status status-disconnected" aria-live="polite" title="OpenClaw offline">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span id="gatewayStatusText">offline</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="workspace-body">
+        <section class="left-panel avatar-panel" id="avatarWrap" data-emotion="neutral">
+          <div class="avatar-stage" id="avatarStage">
+            <canvas id="live2dCanvas" class="live2d-canvas"></canvas>
+            <div id="live2dFallback" class="live2d-fallback">Live2D 加载中...</div>
+          </div>
+          <div class="scene-chat-shell">
+            <div id="messages" class="messages scene-messages"></div>
+          </div>
+          <div class="dock-flyout" id="dockFlyout" data-expanded="false">
+            <button id="dockToggleBtn" class="dock-toggle-btn" type="button" aria-label="展开工具栏" title="展开工具栏" aria-expanded="false">
+              <svg class="dock-toggle-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 7h14"></path>
+                <path d="M5 12h14"></path>
+                <path d="M5 17h14"></path>
+              </svg>
+            </button>
+            <div class="left-dock">
+              <div class="mode-switch dock-mode-switch" role="tablist" aria-label="交互模式">
+                <button id="chatModeBtn" type="button" class="mode-chip is-active" aria-pressed="true">聊天</button>
+                <button id="workModeBtn" type="button" class="mode-chip" aria-pressed="false">工作</button>
+              </div>
+              <button id="voiceToggleBtn" type="button" class="voice-toggle dock-voice-toggle" aria-label="语音朗读">
+                <svg class="voice-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 10h4l5-4v12l-5-4H5z"></path>
+                  <path class="voice-wave wave-1" d="M16 9.5c1 .7 1.5 1.6 1.5 2.5s-.5 1.8-1.5 2.5"></path>
+                  <path class="voice-wave wave-2" d="M18.5 7c1.7 1.2 2.5 3 2.5 5s-.8 3.8-2.5 5"></path>
+                </svg>
+                <span class="voice-slash" aria-hidden="true"></span>
+              </button>
+              <button id="profileBtn" class="dock-btn profile-btn" type="button" aria-label="打开用户侧写" title="打开用户侧写">
+                <img class="dock-icon-image" src="./assets/icon/drawing.png" alt="" aria-hidden="true" />
+              </button>
+              <button id="cameraBtn" class="dock-btn camera-toggle" type="button" aria-label="切换到全身镜头" title="切换到全身镜头">
+                <img class="dock-icon-image" src="./assets/icon/Reverse.png" alt="" aria-hidden="true" />
+              </button>
+              <button id="followBtn" class="dock-btn follow-toggle" type="button" aria-label="开启鼠标跟随" title="开启鼠标跟随">
+                <img id="followBtnIcon" class="dock-icon-image follow-icon-image" src="./assets/icon/Closeeyes.png" alt="" aria-hidden="true" />
+              </button>
+              <div class="dock-bg-switch">
+                <button id="bgPrevBtn" class="dock-icon-btn" type="button" aria-label="上一张背景" title="上一张背景">‹</button>
+                <span id="bgLabel" class="bg-label">教室</span>
+                <button id="bgNextBtn" class="dock-icon-btn" type="button" aria-label="下一张背景" title="下一张背景">›</button>
+              </div>
             </div>
           </div>
-
-          <div id="messages" class="messages"></div>
-
-          <form id="chatForm" class="composer">
-            <div class="input-shell">
-              <input
-                id="messageInput"
-                type="text"
-                placeholder="输入消息..."
-                autocomplete="off"
-                autocapitalize="off"
-                autocorrect="off"
-                spellcheck="false"
-              />
+          <div id="galDialog" class="gal-dialog" aria-live="polite">
+            <div class="gal-dialog-shell">
+              <div class="gal-dialog-header">
+                <span id="galSpeaker" class="gal-speaker">铃汐</span>
+                <span id="galPrompt" class="gal-prompt">她会在这里接住当前对话。</span>
+              </div>
+              <div id="galMessage" class="gal-message">嗨，我是铃汐。现在我们切到桌面工作台界面了。</div>
+              <form id="chatForm" class="composer gal-composer">
+                <div class="input-shell">
+                  <input
+                    id="messageInput"
+                    type="text"
+                    placeholder="在这里继续说..."
+                    autocomplete="off"
+                    autocapitalize="off"
+                    autocorrect="off"
+                    spellcheck="false"
+                  />
+                </div>
+                <button id="micBtn" type="button" class="gal-mic-btn mic-btn">语音</button>
+                <button id="sendBtn" type="submit" class="gal-send-btn send-btn">发送</button>
+              </form>
+              <p class="composer-hint scene-composer-hint">按 Enter 发送</p>
             </div>
-            <button id="micBtn" type="button" class="mic-btn">语音</button>
-            <button id="sendBtn" type="submit" class="send-btn">发送</button>
-          </form>
-          <p class="composer-hint">按 Enter 发送</p>
-          <div class="phone-home-indicator" aria-hidden="true"></div>
-        </div>
+          </div>
+          <div id="profileModal" class="profile-modal hidden" aria-hidden="true">
+            <div id="profileBackdrop" class="profile-backdrop"></div>
+            <aside id="profileCard" class="profile-card" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
+              <div class="profile-card-header">
+                <div>
+                  <h3 id="profileTitle">用户侧写</h3>
+                  <p>提前告诉铃汐你是谁，她会更自然地接住上下文。</p>
+                </div>
+                <button id="closeProfileBtn" type="button" class="profile-close" aria-label="关闭侧写">×</button>
+              </div>
+              <form id="profileForm" class="profile-form">
+                <label>
+                  <span>你的名字</span>
+                  <input id="profileName" type="text" maxlength="20" placeholder="例如：阿泽" />
+                </label>
+                <label>
+                  <span>希望她怎么称呼你</span>
+                  <input id="profilePreferredTitle" type="text" maxlength="20" placeholder="例如：阿泽 / 哥哥 / 老板" />
+                </label>
+                <div class="profile-grid">
+                  <label>
+                    <span>年龄</span>
+                    <input id="profileAge" type="text" maxlength="10" placeholder="例如：24" />
+                  </label>
+                  <label>
+                    <span>职业</span>
+                    <input id="profileJob" type="text" maxlength="24" placeholder="例如：前端工程师" />
+                  </label>
+                </div>
+                <label>
+                  <span>补充侧写</span>
+                  <textarea id="profileTraits" rows="4" maxlength="180" placeholder="例如：夜猫子，最近在做独立产品，喜欢极简风。"></textarea>
+                </label>
+                <p id="profileStatus" class="profile-status" aria-live="polite"></p>
+                <div class="profile-actions">
+                  <button id="saveProfileBtn" type="submit" class="profile-save">保存侧写</button>
+                </div>
+              </form>
+            </aside>
+          </div>
+        </section>
+
       </div>
     </section>
   </main>

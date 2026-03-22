@@ -29,6 +29,10 @@ const desktopQuickbar = document.getElementById('desktopQuickbar');
 const desktopLogsBtn = document.getElementById('desktopLogsBtn');
 const desktopPinBtn = document.getElementById('desktopPinBtn');
 const desktopRefreshBtn = document.getElementById('desktopRefreshBtn');
+const newThreadBtn = document.getElementById('newThreadBtn');
+const threadListEl = document.getElementById('threadList');
+const threadCountEl = document.getElementById('threadCount');
+const historyMetaEl = document.getElementById('historyMeta');
 const gatewayStatus = document.getElementById('gatewayStatus');
 const gatewayStatusText = document.getElementById('gatewayStatusText');
 const phoneTimeEl = document.querySelector('.phone-time');
@@ -107,6 +111,7 @@ let faceTapCount = 0;
 let faceTapTimer = null;
 let electronViewportScaleFrame = 0;
 let desktopPinned = false;
+let sidebarThreadPreviews = [];
 const hasSpeechRecognitionSupport = Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
 const urlSearchParams = new URLSearchParams(window.location.search);
 const isCompactWindow = urlSearchParams.get('compact') === '1';
@@ -167,7 +172,7 @@ const emotionMap = {
 
 try {
   const storedChatView = window.localStorage.getItem('clawmuse-chat-view');
-  if (storedChatView === 'gal' || storedChatView === 'phone') {
+  if (chatViewBtn && (storedChatView === 'gal' || storedChatView === 'phone')) {
     currentChatView = storedChatView;
   }
 } catch (_err) {}
@@ -219,6 +224,108 @@ function updateDesktopQuickbar() {
   desktopPinBtn.classList.toggle('is-active', desktopPinned);
   desktopPinBtn.setAttribute('aria-pressed', String(desktopPinned));
   desktopPinBtn.title = desktopPinned ? '取消固定最前层' : '固定最前层';
+}
+
+function buildThreadPreviewText(text, maxLength = 30) {
+  const cleaned = sanitizeDisplayText(text);
+  if (!cleaned) return '新对话';
+  return cleaned.length > maxLength ? `${cleaned.slice(0, maxLength)}...` : cleaned;
+}
+
+function formatThreadMeta(ts) {
+  const time = Number(ts);
+  if (!Number.isFinite(time) || time <= 0) {
+    return '刚刚';
+  }
+  const diffMs = Date.now() - time;
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  if (diffHours < 1) {
+    const diffMinutes = Math.max(1, Math.floor(diffMs / (1000 * 60)));
+    return `${diffMinutes} 分钟前`;
+  }
+  if (diffHours < 24) {
+    return `${diffHours} 小时前`;
+  }
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays} 天前`;
+}
+
+function renderThreadList() {
+  if (!threadListEl) return;
+  threadListEl.textContent = '';
+
+  if (!sidebarThreadPreviews.length) {
+    const emptyState = document.createElement('div');
+    emptyState.className = 'thread-empty';
+    emptyState.textContent = '这里会展示你最近的对话线索。';
+    threadListEl.appendChild(emptyState);
+  } else {
+    sidebarThreadPreviews.forEach((item, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `thread-item${index === 0 ? ' is-active' : ''}`;
+      button.dataset.threadPreview = item.raw;
+
+      const title = document.createElement('strong');
+      title.textContent = item.title;
+
+      const meta = document.createElement('span');
+      meta.textContent = item.meta;
+
+      button.appendChild(title);
+      button.appendChild(meta);
+      button.addEventListener('click', () => {
+        syncDraftInputs(item.raw);
+        if (inputEl && !inputEl.disabled) {
+          inputEl.focus({ preventScroll: true });
+        }
+      });
+      threadListEl.appendChild(button);
+    });
+  }
+
+  if (threadCountEl) {
+    threadCountEl.textContent = String(sidebarThreadPreviews.length);
+  }
+}
+
+function setThreadPreviewsFromHistory(history = []) {
+  const previews = history
+    .filter((entry) => entry?.role === 'user' && entry?.content)
+    .slice(-10)
+    .reverse()
+    .map((entry) => ({
+      raw: sanitizeDisplayText(entry.content),
+      title: buildThreadPreviewText(entry.content),
+      meta: formatThreadMeta(entry?.ts)
+    }))
+    .filter((entry, index, array) => entry.raw && array.findIndex((item) => item.raw === entry.raw) === index);
+
+  sidebarThreadPreviews = previews;
+  renderThreadList();
+}
+
+function prependThreadPreview(text, mode = currentMode) {
+  const raw = sanitizeDisplayText(text);
+  if (!raw) return;
+  sidebarThreadPreviews = [
+    {
+      raw,
+      title: buildThreadPreviewText(raw),
+      meta: formatThreadMeta(Date.now())
+    },
+    ...sidebarThreadPreviews.filter((item) => item.raw !== raw)
+  ].slice(0, 10);
+  renderThreadList();
+}
+
+function updateHistoryMeta(total = 0, restored = 0) {
+  if (!historyMetaEl) return;
+  if (!total) {
+    historyMetaEl.textContent = '新的对话会从这里展开';
+    return;
+  }
+  historyMetaEl.textContent = `已恢复 ${restored}/${total} 条历史`;
 }
 
 async function syncDesktopWindowState() {
@@ -359,7 +466,7 @@ function syncDraftInputs(value = '') {
 }
 
 function setChatView(mode) {
-  currentChatView = mode === 'gal' ? 'gal' : 'phone';
+  currentChatView = chatViewBtn && mode === 'gal' ? 'gal' : 'phone';
   document.body.dataset.chatView = currentChatView;
   if (appRoot) {
     appRoot.dataset.chatView = currentChatView;
@@ -394,6 +501,7 @@ function addMessage(text, role) {
   messagesEl.scrollTop = messagesEl.scrollHeight;
   if (role === 'user') {
     lastUserUtterance = cleanedText;
+    prependThreadPreview(cleanedText);
   }
   setGalDialogue(role, cleanedText, role === 'user' ? getPreviousAssistantPrompt() : '');
   return div;
@@ -1165,6 +1273,8 @@ async function restoreHistory() {
     if (!res.ok) return false;
     const data = await res.json();
     const history = Array.isArray(data?.history) ? data.history : [];
+    updateHistoryMeta(Number(data?.total || 0), Number(data?.restored || history.length));
+    setThreadPreviewsFromHistory(history);
     if (!history.length) return false;
     messagesEl.textContent = '';
     history.forEach((entry) => renderHistoryEntry(entry));
@@ -1176,6 +1286,7 @@ async function restoreHistory() {
     messagesEl.scrollTop = messagesEl.scrollHeight;
     return true;
   } catch (_err) {
+    updateHistoryMeta(0, 0);
     return false;
   }
 }
@@ -2520,6 +2631,20 @@ if (chatViewBtn) {
     setChatView(currentChatView === 'gal' ? 'phone' : 'gal');
   });
 }
+if (newThreadBtn) {
+  newThreadBtn.addEventListener('click', () => {
+    messagesEl.textContent = '';
+    removeHistoryDivider();
+    syncDraftInputs('');
+    updateHistoryMeta(0, 0);
+    setGalDialogue('bot', '新的对话已经准备好了，我们继续。');
+    const seedMessage = addMessage('新的对话已经准备好了，我们继续。', 'bot');
+    seedMessage.dataset.systemSeed = 'true';
+    if (inputEl && !inputEl.disabled) {
+      inputEl.focus({ preventScroll: true });
+    }
+  });
+}
 if (dockToggleBtn) {
   dockToggleBtn.addEventListener('click', (event) => {
     event.stopPropagation();
@@ -2584,6 +2709,8 @@ setChatView(currentChatView);
 void syncDesktopWindowState();
 queueElectronViewportScale();
 applyBackgroundScene(0);
+renderThreadList();
+updateHistoryMeta(0, 0);
 updatePhoneTime();
 window.setInterval(updatePhoneTime, 30000);
 void loadProfile();
