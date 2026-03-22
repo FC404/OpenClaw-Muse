@@ -342,12 +342,19 @@ function setPinned(checked) {
   mainWindow.setAlwaysOnTop(Boolean(checked), 'screen-saver');
 }
 
+function getWindowState() {
+  return {
+    pinned: Boolean(mainWindow && !mainWindow.isDestroyed() && mainWindow.isAlwaysOnTop()),
+    hasLogWindow: Boolean(logWindow && !logWindow.isDestroyed())
+  };
+}
+
 function getWindowLayout() {
   const display = screen.getPrimaryDisplay().workArea;
   const gap = 14;
   const logWidth = clamp(Math.round(display.width * 0.26), 380, 500);
-  const mainWidth = clamp(display.width - logWidth - gap - 40, 640, 1320);
-  const height = clamp(display.height - 40, 560, 940);
+  const mainWidth = clamp(display.width - logWidth - gap - 40, 500, 1320);
+  const height = clamp(display.height - 40, 300, 940);
   const totalWidth = mainWidth + logWidth + gap;
   const startX = display.x + Math.max(0, Math.floor((display.width - totalWidth) / 2));
   const startY = display.y + Math.max(10, Math.floor((display.height - height) / 2));
@@ -422,7 +429,7 @@ function createLogWindow() {
 function buildMenu() {
   const template = [
     {
-      label: 'ClawMuse',
+      label: 'OpenClaw-Muse',
       submenu: [
         { role: 'reload', label: 'Reload' },
         { role: 'forceReload', label: 'Force Reload' },
@@ -483,13 +490,14 @@ async function createMainWindow() {
     y: layout.main.y,
     width: layout.main.width,
     height: layout.main.height,
-    minWidth: 640,
-    minHeight: 560,
+    minWidth: 500,
+    minHeight: 300,
     backgroundColor: '#0b0b0b',
-    title: 'ClawMuse',
+    title: 'OpenClaw-Muse',
     show: false,
-    autoHideMenuBar: false,
+    autoHideMenuBar: true,
     webPreferences: {
+      preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false
@@ -497,6 +505,7 @@ async function createMainWindow() {
   });
 
   mainWindow.once('ready-to-show', () => {
+    mainWindow.setMenuBarVisibility(false);
     mainWindow.show();
   });
 
@@ -535,6 +544,21 @@ ipcMain.handle('logs:snapshot', () => buildLogSnapshot());
 ipcMain.handle('logs:refresh', async () => {
   await refreshRuntimeSnapshot();
   return buildLogSnapshot();
+});
+ipcMain.handle('window:show-logs', () => {
+  createLogWindow();
+  return { ok: true, ...getWindowState() };
+});
+ipcMain.handle('window:get-state', () => getWindowState());
+ipcMain.handle('window:set-pinned', (_event, checked) => {
+  setPinned(checked);
+  return getWindowState();
+});
+ipcMain.handle('window:refresh-app', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.reloadIgnoringCache();
+  }
+  return { ok: true };
 });
 
 app.whenReady().then(async () => {

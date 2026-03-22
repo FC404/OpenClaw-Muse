@@ -25,6 +25,10 @@ const chatViewBtnText = document.getElementById('chatViewBtnText');
 const bgPrevBtn = document.getElementById('bgPrevBtn');
 const bgNextBtn = document.getElementById('bgNextBtn');
 const bgLabel = document.getElementById('bgLabel');
+const desktopQuickbar = document.getElementById('desktopQuickbar');
+const desktopLogsBtn = document.getElementById('desktopLogsBtn');
+const desktopPinBtn = document.getElementById('desktopPinBtn');
+const desktopRefreshBtn = document.getElementById('desktopRefreshBtn');
 const gatewayStatus = document.getElementById('gatewayStatus');
 const gatewayStatusText = document.getElementById('gatewayStatusText');
 const phoneTimeEl = document.querySelector('.phone-time');
@@ -80,6 +84,7 @@ let currentChatView = 'phone';
 let isDockExpanded = false;
 let galThinkingTimer = null;
 let lastUserUtterance = '';
+let lastAssistantUtterance = '';
 const HISTORY_LIMIT = 20;
 let runtimeStatusTimer = null;
 let ttsStatusTimer = null;
@@ -100,6 +105,8 @@ let currentCameraMode = 'upper-body';
 let currentBackgroundIndex = 0;
 let faceTapCount = 0;
 let faceTapTimer = null;
+let electronViewportScaleFrame = 0;
+let desktopPinned = false;
 const hasSpeechRecognitionSupport = Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
 const urlSearchParams = new URLSearchParams(window.location.search);
 const isCompactWindow = urlSearchParams.get('compact') === '1';
@@ -205,6 +212,79 @@ function shortenDialoguePrompt(text, maxLength = 42) {
   return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;
 }
 
+function updateDesktopQuickbar() {
+  if (!desktopQuickbar || !desktopPinBtn) return;
+  const available = isElectronWindow && window.clawMuseDesktop;
+  desktopQuickbar.classList.toggle('hidden', !available);
+  desktopPinBtn.classList.toggle('is-active', desktopPinned);
+  desktopPinBtn.setAttribute('aria-pressed', String(desktopPinned));
+  desktopPinBtn.title = desktopPinned ? '取消固定最前层' : '固定最前层';
+}
+
+async function syncDesktopWindowState() {
+  if (!isElectronWindow || !window.clawMuseDesktop) return;
+  try {
+    const state = await window.clawMuseDesktop.getState();
+    desktopPinned = Boolean(state?.pinned);
+  } catch (_err) {
+    desktopPinned = false;
+  }
+  updateDesktopQuickbar();
+}
+
+function updateElectronViewportScale() {
+  if (!isElectronWindow || !appRoot) return;
+
+  appRoot.dataset.scaled = 'false';
+  appRoot.style.setProperty('--electron-app-width', '100vw');
+  appRoot.style.setProperty('--electron-app-height', '100vh');
+  appRoot.style.setProperty('--electron-app-scale', '1');
+  appRoot.style.setProperty('--electron-app-offset-x', '0px');
+  appRoot.style.setProperty('--electron-app-offset-y', '0px');
+
+  const viewportWidth = Math.max(window.innerWidth, 1);
+  const viewportHeight = Math.max(window.innerHeight, 1);
+  const naturalWidth = Math.max(Math.ceil(appRoot.scrollWidth), viewportWidth);
+  const naturalHeight = Math.max(Math.ceil(appRoot.scrollHeight), viewportHeight);
+  const scale = Math.min(viewportWidth / naturalWidth, viewportHeight / naturalHeight, 1);
+
+  if (scale >= 0.999) {
+    return;
+  }
+
+  const scaledWidth = naturalWidth * scale;
+  const scaledHeight = naturalHeight * scale;
+  const offsetX = Math.max(0, Math.floor((viewportWidth - scaledWidth) / 2));
+  const offsetY = Math.max(0, Math.floor((viewportHeight - scaledHeight) / 2));
+
+  appRoot.dataset.scaled = 'true';
+  appRoot.style.setProperty('--electron-app-width', `${naturalWidth}px`);
+  appRoot.style.setProperty('--electron-app-height', `${naturalHeight}px`);
+  appRoot.style.setProperty('--electron-app-scale', scale.toFixed(4));
+  appRoot.style.setProperty('--electron-app-offset-x', `${offsetX}px`);
+  appRoot.style.setProperty('--electron-app-offset-y', `${offsetY}px`);
+}
+
+function queueElectronViewportScale() {
+  if (!isElectronWindow || !appRoot) return;
+  if (electronViewportScaleFrame) {
+    window.cancelAnimationFrame(electronViewportScaleFrame);
+  }
+  electronViewportScaleFrame = window.requestAnimationFrame(() => {
+    electronViewportScaleFrame = 0;
+    updateElectronViewportScale();
+  });
+}
+
+function getPreviousAssistantPrompt(currentText = '') {
+  const previous = sanitizeDisplayText(lastAssistantUtterance);
+  const current = sanitizeDisplayText(currentText);
+  if (previous && previous !== current) {
+    return `铃汐上一句：${shortenDialoguePrompt(previous)}`;
+  }
+  return '铃汐会在这里接住你。';
+}
+
 function stopGalThinkingIndicator() {
   if (galThinkingTimer) {
     window.clearInterval(galThinkingTimer);
@@ -218,10 +298,16 @@ function stopGalThinkingIndicator() {
 function setGalDialogue(role, text, prompt = '') {
   if (!galDialog || !galSpeakerEl || !galPromptEl || !galMessageEl) return;
   stopGalThinkingIndicator();
+  const cleanedText = sanitizeDisplayText(text) || '...';
   galDialog.dataset.role = role;
   galSpeakerEl.textContent = getDialogueSpeaker(role);
-  galPromptEl.textContent = prompt || (role === 'user' ? '铃汐会在这里接住你。' : '隐藏手机面板时，也可以在这里继续聊天。');
-  galMessageEl.textContent = sanitizeDisplayText(text) || '...';
+  galPromptEl.textContent = role === 'bot'
+    ? getPreviousAssistantPrompt(cleanedText)
+    : (prompt || getPreviousAssistantPrompt());
+  galMessageEl.textContent = cleanedText;
+  if (role === 'bot' && cleanedText && cleanedText !== '...') {
+    lastAssistantUtterance = cleanedText;
+  }
 }
 
 function startGalThinkingIndicator() {
@@ -293,6 +379,7 @@ function setChatView(mode) {
     inputEl.focus({ preventScroll: true });
   }
   window.setTimeout(() => {
+    queueElectronViewportScale();
     window.dispatchEvent(new Event('resize'));
   }, 40);
 }
@@ -308,13 +395,7 @@ function addMessage(text, role) {
   if (role === 'user') {
     lastUserUtterance = cleanedText;
   }
-  setGalDialogue(
-    role,
-    cleanedText,
-    role === 'bot' && lastUserUtterance
-      ? `你刚刚说：${shortenDialoguePrompt(lastUserUtterance)}`
-      : '铃汐会在这里接住你。'
-  );
+  setGalDialogue(role, cleanedText, role === 'user' ? getPreviousAssistantPrompt() : '');
   return div;
 }
 
@@ -549,6 +630,9 @@ function updateVoiceToggleButton() {
 function updateAppAvailability() {
   const available = openClawConnected;
   const copy = getModeCopy(currentMode);
+  const speechUnavailableText = isElectronWindow
+    ? '当前桌面版还没有接入可用的语音识别，请先用浏览器版。'
+    : '当前浏览器不支持语音识别';
   const chatPlaceholder = available
     ? (isChatMode() ? '在这里继续说...' : copy.placeholder)
     : 'OpenClaw 未连接，当前不可聊天';
@@ -577,7 +661,7 @@ function updateAppAvailability() {
       micBtn.textContent = hasSpeechRecognitionSupport ? '语音' : '无语音';
     }
     micBtn.title = available
-      ? (hasSpeechRecognitionSupport ? '语音识别' : '当前浏览器不支持语音识别')
+      ? (hasSpeechRecognitionSupport ? '语音识别' : speechUnavailableText)
       : 'OpenClaw 未连接';
   }
 
@@ -587,7 +671,7 @@ function updateAppAvailability() {
       galMicBtn.textContent = hasSpeechRecognitionSupport ? '语音' : '无语音';
     }
     galMicBtn.title = available
-      ? (hasSpeechRecognitionSupport ? '语音识别' : '当前浏览器不支持语音识别')
+      ? (hasSpeechRecognitionSupport ? '语音识别' : speechUnavailableText)
       : 'OpenClaw 未连接';
   }
 
@@ -652,6 +736,15 @@ async function refreshRuntimeStatus() {
   } catch (_err) {
     updateGatewayStatusUI(false, 'offline');
   }
+}
+
+async function ensureOpenClawReadyBeforeSend() {
+  if (openClawConnected) {
+    return true;
+  }
+
+  await refreshRuntimeStatus();
+  return openClawConnected;
 }
 
 function initRuntimeStatus() {
@@ -771,7 +864,7 @@ function detectPrimarySpeechLanguage(text) {
 
 function mergeSpeechChunks(chunks, lang, chunkLimit) {
   const merged = [];
-  const minChunkLength = lang === 'en' ? 110 : 20;
+  const minChunkLength = lang === 'en' ? 54 : 20;
 
   for (const entry of chunks) {
     const text = String(entry?.text || '').trim();
@@ -784,11 +877,14 @@ function mergeSpeechChunks(chunks, lang, chunkLimit) {
 
     const previous = merged[merged.length - 1];
     const combined = `${previous.text} ${text}`.replace(/\s+/g, ' ').trim();
-    const shouldMergeShortTail =
-      previous.text.length < minChunkLength ||
-      (text.length < Math.max(10, Math.floor(minChunkLength * 0.7)) && combined.length <= chunkLimit * 1.15);
+    const shouldMergeShortTail = lang === 'en'
+      ? text.length < 20 && combined.length <= chunkLimit * 1.08
+      : (
+          previous.text.length < minChunkLength ||
+          (text.length < Math.max(10, Math.floor(minChunkLength * 0.7)) && combined.length <= chunkLimit * 1.15)
+        );
 
-    if (shouldMergeShortTail && combined.length <= chunkLimit * 1.18) {
+    if (shouldMergeShortTail && combined.length <= chunkLimit * (lang === 'en' ? 1.08 : 1.18)) {
       previous.text = combined;
     } else {
       merged.push({ text, lang });
@@ -804,15 +900,15 @@ function splitSpeechText(text, maxChunkLength = 92) {
     .replace(/[“”]/g, '"')
     .trim();
   const preferredLang = detectPrimarySpeechLanguage(normalized);
-  const chunkLimit = preferredLang === 'en' ? 320 : maxChunkLength;
+  const chunkLimit = preferredLang === 'en' ? 150 : maxChunkLength;
 
   if (!normalized) return [];
-  if (preferredLang === 'en' && normalized.length <= chunkLimit) {
+  if (preferredLang === 'en' && normalized.length <= 72) {
     return [{ text: normalized, lang: preferredLang }];
   }
 
   const sentenceParts = normalized
-    .split(preferredLang === 'en' ? /(?<=[.!?])/ : /(?<=[，,。！？!?；;])/)
+    .split(preferredLang === 'en' ? /(?<=[,;:.!?])\s*/ : /(?<=[，,。！？!?；;])/)
     .map((part) => part.trim())
     .filter(Boolean);
 
@@ -826,16 +922,16 @@ function splitSpeechText(text, maxChunkLength = 92) {
     const part = sentenceParts[i];
     const nextPart = sentenceParts[i + 1] || '';
     const candidate = `${current}${part}`.trim();
-    const endsWithComma = preferredLang !== 'en' && /[，,]$/.test(candidate);
-    const endsWithMajorPause = /[。！？!?；;]$/.test(candidate);
+    const endsWithComma = preferredLang === 'en' ? /[,;:]$/.test(candidate) : /[，,]$/.test(candidate);
+    const endsWithMajorPause = preferredLang === 'en' ? /[.!?]$/.test(candidate) : /[。！？!?；;]$/.test(candidate);
     const canGrow = candidate.length <= chunkLimit;
 
-    if (!current || (canGrow && (!endsWithMajorPause || endsWithComma || candidate.length < 22))) {
+    if (!current || (canGrow && (!endsWithMajorPause || endsWithComma || candidate.length < (preferredLang === 'en' ? 40 : 22)))) {
       current = candidate;
       if (endsWithComma && nextPart) {
         continue;
       }
-      if (endsWithMajorPause && current.length >= 14) {
+      if (endsWithMajorPause && current.length >= (preferredLang === 'en' ? 28 : 14)) {
         chunks.push(current);
         current = '';
       }
@@ -1045,7 +1141,7 @@ function renderWorkReply(node, text) {
   }
 
   messagesEl.scrollTop = messagesEl.scrollHeight;
-  setGalDialogue('bot', summary || title, lastUserUtterance ? `你刚刚说：${shortenDialoguePrompt(lastUserUtterance)}` : '');
+  setGalDialogue('bot', summary || title);
 }
 
 function renderHistoryEntry(entry) {
@@ -1072,6 +1168,10 @@ async function restoreHistory() {
     if (!history.length) return false;
     messagesEl.textContent = '';
     history.forEach((entry) => renderHistoryEntry(entry));
+    const lastAssistantEntry = [...history].reverse().find((entry) => entry?.role === 'assistant' && entry?.content);
+    if (lastAssistantEntry) {
+      setGalDialogue('bot', lastAssistantEntry.content);
+    }
     addHistoryDivider();
     messagesEl.scrollTop = messagesEl.scrollHeight;
     return true;
@@ -1140,7 +1240,7 @@ async function typeOutMessage(node, text) {
   for (let i = 0; i < chars.length; i += 1) {
     node.textContent += chars[i];
     messagesEl.scrollTop = messagesEl.scrollHeight;
-    setGalDialogue('bot', node.textContent, lastUserUtterance ? `你刚刚说：${shortenDialoguePrompt(lastUserUtterance)}` : '');
+    setGalDialogue('bot', node.textContent);
     const ch = chars[i];
     const delay = /[，。！？,.!?]/.test(ch) ? 160 : 42;
     await sleep(delay);
@@ -2125,7 +2225,8 @@ async function initLive2D() {
 }
 
 async function sendMessage(message) {
-  if (!openClawConnected) {
+  const ready = await ensureOpenClawReadyBeforeSend();
+  if (!ready) {
     addMessage('OpenClaw 还没有连接上，现在不能聊天。', 'bot');
     return;
   }
@@ -2157,6 +2258,9 @@ async function sendMessage(message) {
       } catch (_err) {}
       loadingNode.textContent = sanitizeDisplayText(errorMessage);
       setGalDialogue('bot', errorMessage, lastUserUtterance ? `你刚刚说：${shortenDialoguePrompt(lastUserUtterance)}` : '');
+      if (/OpenClaw/.test(errorMessage)) {
+        void refreshRuntimeStatus();
+      }
       return;
     }
 
@@ -2192,15 +2296,18 @@ async function sendMessage(message) {
 function initSpeechRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition || !micBtn) {
+    const unsupportedMessage = isElectronWindow
+      ? '当前桌面版还没有接入可用的语音识别，请先用浏览器版。'
+      : '当前浏览器不支持语音识别。';
     if (micBtn) {
       micBtn.disabled = true;
       micBtn.textContent = '无语音';
-      micBtn.title = '当前浏览器不支持语音识别';
+      micBtn.title = unsupportedMessage;
     }
     if (galMicBtn) {
       galMicBtn.disabled = true;
       galMicBtn.textContent = '无语音';
-      galMicBtn.title = '当前浏览器不支持语音识别';
+      galMicBtn.title = unsupportedMessage;
     }
     return;
   }
@@ -2236,8 +2343,18 @@ function initSpeechRecognition() {
     syncDraftInputs(transcript.trim());
   };
 
-  recognition.onerror = () => {
-    addMessage('语音识别失败，请检查麦克风权限后重试。', 'bot');
+  recognition.onerror = (event) => {
+    const reason = String(event?.error || '').trim();
+    const message = reason === 'not-allowed' || reason === 'service-not-allowed'
+      ? '麦克风权限没有打开，允许访问后再试试。'
+      : reason === 'audio-capture'
+        ? '没有检测到可用麦克风。'
+        : reason === 'no-speech'
+          ? '这次没有听清楚，你可以再说一次。'
+          : reason === 'network'
+            ? '语音识别服务暂时不可用。'
+            : '当前环境还没有接入可用的语音识别。';
+    setGalDialogue('bot', message);
   };
 
   recognition.onend = () => {
@@ -2415,6 +2532,42 @@ window.addEventListener('click', (event) => {
   setDockExpanded(false);
 });
 
+if (desktopLogsBtn) {
+  desktopLogsBtn.addEventListener('click', async () => {
+    if (!window.clawMuseDesktop) return;
+    await window.clawMuseDesktop.showLogs();
+  });
+}
+
+if (desktopPinBtn) {
+  desktopPinBtn.addEventListener('click', async () => {
+    if (!window.clawMuseDesktop) return;
+    const state = await window.clawMuseDesktop.setPinned(!desktopPinned);
+    desktopPinned = Boolean(state?.pinned);
+    updateDesktopQuickbar();
+  });
+}
+
+if (desktopRefreshBtn) {
+  desktopRefreshBtn.addEventListener('click', async () => {
+    if (!window.clawMuseDesktop) return;
+    desktopRefreshBtn.disabled = true;
+    try {
+      await window.clawMuseDesktop.refreshApp();
+    } finally {
+      window.setTimeout(() => {
+        if (desktopRefreshBtn) {
+          desktopRefreshBtn.disabled = false;
+        }
+      }, 800);
+    }
+  });
+}
+
+window.addEventListener('resize', () => {
+  queueElectronViewportScale();
+});
+
 window.addEventListener('pointerdown', () => {
   primeAudioPlayback();
 }, { passive: true });
@@ -2428,6 +2581,8 @@ initRuntimeStatus();
 updateModeUI();
 updateDockFlyoutUI();
 setChatView(currentChatView);
+void syncDesktopWindowState();
+queueElectronViewportScale();
 applyBackgroundScene(0);
 updatePhoneTime();
 window.setInterval(updatePhoneTime, 30000);

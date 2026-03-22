@@ -166,11 +166,13 @@ function parseReplySegments(rawReply, mode) {
 }
 
 function sanitizeForTts(text) {
-  const normalized = String(text || '')
+  const source = String(text || '');
+  const isPureEnglish = !/[\u4e00-\u9fff]/.test(source) && /[A-Za-z]/.test(source);
+  const normalized = source
     .replace(/```[\s\S]*?```/g, '这里是一段代码。')
     .replace(/^#{1,6}\s*/gm, '')
     .replace(/[#*`>-]/g, '')
-    .replace(/\n+/g, '，')
+    .replace(/\n+/g, isPureEnglish ? '. ' : '，')
     .replace(/\s{2,}/g, ' ')
     .trim();
 
@@ -179,24 +181,25 @@ function sanitizeForTts(text) {
 
 function normalizeEnglishNarration(text) {
   return String(text || '')
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/[—–]/g, ', ')
+    .replace(/[_/\\]+/g, ' ')
     .replace(/([a-z])([A-Z])/g, '$1 $2')
     .replace(/\bon([A-Z][a-z]+)/g, 'on $1')
-    .replace(/\b([A-Z]{2,})\b/g, (match) => match.split('').join(' '))
     .replace(/\bDOM\b/g, 'D O M')
     .replace(/\bAPI\b/g, 'A P I')
     .replace(/\bURL\b/g, 'U R L')
     .replace(/\bUI\b/g, 'U I')
     .replace(/\bUX\b/g, 'U X')
-    .replace(/\bTS\b/g, 'Type Script')
-    .replace(/\bJS\b/g, 'Java Script')
+    .replace(/\bTS\b/g, 'T S')
+    .replace(/\bJS\b/g, 'J S')
     .replace(/\bVue\b/gi, 'View')
     .replace(/\bReact\b/gi, 'React')
     .replace(/\bon Activated\b/g, 'on activated')
     .replace(/\bon Deactivated\b/g, 'on deactivated')
-    .replace(/\bsetup\b/gi, 'setup')
-    .replace(/\bmounted\b/gi, 'mounted')
-    .replace(/\bupdated\b/gi, 'updated')
-    .replace(/\bunmounted\b/gi, 'unmounted')
+    .replace(/::/g, ', ')
+    .replace(/\s+([,.;:!?])/g, '$1')
     .replace(/\s{2,}/g, ' ')
     .trim();
 }
@@ -208,7 +211,11 @@ function normalizeTtsNarration(text) {
   const hasLatin = /[A-Za-z]/.test(source);
   if (hasLatin) {
     if (hasChinese) {
-      return source.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/\b([A-Z]{2,})\b/g, (match) => match.split('').join(' ')).replace(/\s{2,}/g, ' ').trim();
+      return source
+        .replace(/([a-z])([A-Z])/g, '$1 $2')
+        .replace(/\b(API|URL|UI|UX|DOM)\b/g, (match) => match.split('').join(' '))
+        .replace(/\s{2,}/g, ' ')
+        .trim();
     }
     return normalizeEnglishNarration(source);
   }

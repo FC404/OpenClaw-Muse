@@ -17,6 +17,11 @@
         <div id="live2dFallback" class="live2d-fallback">Live2D 加载中...</div>
       </div>
       <div class="avatar-topbar">
+        <div id="desktopQuickbar" class="desktop-quickbar hidden" aria-label="桌面控制">
+          <button id="desktopLogsBtn" class="desktop-tool-btn" type="button" title="查看日志">日志</button>
+          <button id="desktopPinBtn" class="desktop-tool-btn" type="button" title="固定最前层" aria-pressed="false">置顶</button>
+          <button id="desktopRefreshBtn" class="desktop-tool-btn" type="button" title="刷新当前窗口">刷新</button>
+        </div>
         <div id="gatewayStatus" class="status status-disconnected" aria-live="polite" title="OpenClaw offline">
           <span class="status-dot" aria-hidden="true"></span>
           <span id="gatewayStatusText">offline</span>
